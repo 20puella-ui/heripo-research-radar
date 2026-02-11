@@ -1,6 +1,16 @@
 import type { CrawlingTarget } from '@llm-newsletter-kit/core';
 
+import { JSDOM } from 'jsdom';
+import safeMarkdown2Html from 'safe-markdown2html';
+
 import { newsletterConfig } from '~/config';
+import {
+  heripoLogoHtml,
+  krasHeaderHtml,
+  platformIntroHtml,
+  poweredByFooterHtml,
+} from '~/templates/shared';
+import type { NewsletterTemplateOptions } from '~/types/dependencies';
 
 /**
  * Creates an HTML template for the newsletter email
@@ -14,17 +24,20 @@ import { newsletterConfig } from '~/config';
  * - Platform introduction
  *
  * @param targets - Array of crawling targets to be listed in the newsletter footer
+ * @param options - Optional template customization options
  * @returns Complete HTML string for the newsletter email
  *
  * @example
  * ```typescript
- * const html = createNewsletterHtmlTemplate([
- *   { id: '1', name: 'Source 1', url: 'https://example.com', ... }
- * ]);
+ * const html = createNewsletterHtmlTemplate(
+ *   [{ id: '1', name: 'Source 1', url: 'https://example.com', ... }],
+ *   { isKrasNewsletter: true, krasNewsMarkdown: '## News...' },
+ * );
  * ```
  */
 export const createNewsletterHtmlTemplate = (
   targets: CrawlingTarget[],
+  options?: NewsletterTemplateOptions,
 ) => `<!DOCTYPE html>
 <html lang="ko" style="color-scheme: light dark; supported-color-schemes: light dark;">
 <head>
@@ -403,6 +416,18 @@ export const createNewsletterHtmlTemplate = (
               background-color: #23201c !important;
           }
 
+
+          .header-dark-text {
+            color: #eeeeee !important;
+          }
+    
+          .header-title-border {
+            border-bottom-color: #E59866 !important;
+          }
+    
+          .dark-logo-inline {
+            display: inline-block !important;
+          }
       }
   </style>
 </head>
@@ -418,16 +443,62 @@ export const createNewsletterHtmlTemplate = (
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; mso-table-lspace: 0pt; mso-table-rspace: 0pt; max-width: 800px;" class="container" role="presentation">
         <tr>
           <td bgcolor="#ffffff" align="left" class="content-cell dark-mode-content-bg" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; mso-table-lspace: 0pt; mso-table-rspace: 0pt; padding: 44px 44px 36px 44px; border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.07);">
-            <div style="margin-bottom: 32px;">
-              <div style="text-align: left; display: block;" class="light-logo">
-                <img src="https://heripo.com/heripo-logo.png" width="150" alt="로고" style="-ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; margin-bottom: 12px;" height="auto">
-              </div>
-              <!--[if !mso]><!-->
-              <div style="text-align: left; display: none;" class="dark-logo">
-                <img src="https://heripo.com/heripo-logo-dark.png" width="150" alt="다크모드 로고" style="-ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; margin-bottom: 12px;" height="auto">
-              </div>
-              <!--<![endif]-->
-            </div>
+            ${
+              options?.isKrasNewsletter
+                ? `${krasHeaderHtml()}
+            <!-- 헤더: 제목/날짜 행 -->
+            <table cellpadding="0" cellspacing="0" width="100%" role="presentation" class="header-title-border" style="width: 100%; border-collapse: collapse; margin: 0 0 18px 0; mso-table-lspace: 0pt; mso-table-rspace: 0pt; margin-bottom: 32px; border: none; border-bottom: 3px solid #D2691E;">
+              <tr>
+                <td align="left" valign="baseline" class="header-dark-text" style="text-align: left; padding: 0 0 14px 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 26px; font-weight: bold; color: #111111; line-height: 1.2; border: none;">
+                  한국고고학회 뉴스레터
+                </td>
+                <td align="left" valign="baseline" class="header-dark-text" style="text-align: left; padding: 0 0 14px 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; color: #333333; white-space: nowrap; border: none; width: 1px;" width="1">
+                  ${options?.displayDate ?? ''}
+                </td>
+              </tr>
+            </table>            
+            `
+                : `${heripoLogoHtml('12px')}
+                `
+            }
+
+            ${
+              options?.krasNewsMarkdown
+                ? safeMarkdown2Html(
+                    `## 학회 소식
+${options.krasNewsMarkdown}
+
+---
+`,
+                    {
+                      window: new JSDOM('').window,
+                      linkTargetBlank: true,
+                      fixMalformedUrls: true,
+                      fixBoldSyntax: true,
+                      convertStrikethrough: true,
+                    },
+                  )
+                : ''
+            }
+            
+            ${
+              options?.heripolabNewsMarkdown
+                ? safeMarkdown2Html(
+                    `## heripo lab 소식
+${options.heripolabNewsMarkdown}
+
+---
+`,
+                    {
+                      window: new JSDOM('').window,
+                      linkTargetBlank: true,
+                      fixMalformedUrls: true,
+                      fixBoldSyntax: true,
+                      convertStrikethrough: true,
+                    },
+                  )
+                : ''
+            }
 
             {{NEWSLETTER_CONTENT}}
 
@@ -445,7 +516,7 @@ export const createNewsletterHtmlTemplate = (
             </ul>
             <hr style="border: 0; border-top: 2px solid #D2691E; margin: 32px 0;">
             <h2 style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; line-height: 1.3; color: #D2691E; margin: 0 0 16px 0; letter-spacing: -0.2px; border-left: 5px solid #D2691E; padding-left: 12px; background: none;">📅 발행 정책</h2>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;"><strong>heripo 리서치 레이더</strong>는 매일 발행을 원칙으로 하되, 독자분들께 의미 있는 정보를 제공하기 위해 다음과 같은 발행 기준을 적용합니다:</p>
+            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;"><strong>${options?.isKrasNewsletter ? '한국고고학회' : 'heripo 리서치 레이더'}</strong>는 매일 발행을 원칙으로 하되, 독자분들께 의미 있는 정보를 제공하기 위해 다음과 같은 발행 기준을 적용합니다:</p>
             <ul style="padding-left: 24px; margin: 0 0 18px 0;">
               <li style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0; margin-bottom: 8px;"><strong>정상 발행</strong>: 새로운 소식이 ${newsletterConfig.publicationCriteria.minimumArticleCountForIssue + 1}개 이상이거나, ${newsletterConfig.publicationCriteria.minimumArticleCountForIssue}개 이하여도 중요도 ${newsletterConfig.publicationCriteria.priorityArticleScoreThreshold}점 이상의 핵심 소식이 포함된 경우</li>
               <li style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0; margin-bottom: 8px;"><strong>이월 발행</strong>: 새로운 소식이 ${newsletterConfig.publicationCriteria.minimumArticleCountForIssue}개 이하이면서 중요한 내용(${newsletterConfig.publicationCriteria.priorityArticleScoreThreshold}점 이상)이 없을 경우, 다음 호로 이월하여 더 풍성한 내용으로 제공</li>
@@ -454,11 +525,7 @@ export const createNewsletterHtmlTemplate = (
             <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;">이러한 정책을 통해 매일 의미 없는 소식으로 독자분들의 시간을 낭비하지 않고, 정말 중요한 정보를 적절한 타이밍에 제공하고자 합니다.</p>
             <hr style="border: 0; border-top: 2px solid #D2691E; margin: 32px 0;">
             <h2 style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; line-height: 1.3; color: #D2691E; margin: 0 0 16px 0; letter-spacing: -0.2px; border-left: 5px solid #D2691E; padding-left: 12px; background: none;">🔍 heripo(헤리포) 플랫폼 소개</h2>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;">heripo는 고고학 연구 환경의 실질적인 디지털 전환을 지향하는 연구 플랫폼입니다.</p>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;">발굴조사보고서(PDF) 속에 갇힌 텍스트와 도면을 분석 가능한 구조화된 데이터로 전환하여, 연구자가 자료를 보다 체계적으로 탐색하고 재사용할 수 있는 인프라를 구축하고 있습니다.</p>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7;
-             color: #444444; margin: 0 0 18px 0;">현재는 소프트웨어 엔지니어와 고고학 연구자가 함께하는 <strong><a href="https://github.com/heripo-lab" target="_blank">heripo lab</a></strong>으로 운영 중이며, 2026년 1월 28일 핵심 엔진을 <strong><a href="https://github.com/heripo-lab/heripo-engine" target="_blank">오픈소스로 공개</a></strong>했습니다.</p>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 18px 0;">오픈소스로 공개된 핵심 기능은 <strong><a href="https://engine-demo.heripo.com" target="_blank">데모 사이트</a></strong>에서 직접 체험해 보실 수 있으며, 플랫폼 프로토타입 출시 시 구독자분들께 우선 안내해 드리겠습니다.</p>
+${platformIntroHtml()}
             <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7;
              color: #444444; margin: 0 0 18px 0;">보고 계신 뉴스레터(리서치 레이더)는 heripo의 초기 선행 기능 중 하나입니다. 뉴스레터 소스 추가 요청은 <a href="https://github.com/heripo-lab/heripo-research-radar/issues" target="_blank">GitHub 이슈</a>를 통해 언제든 환영합니다.</p>
             <hr style="border: 0; border-top: 2px solid #D2691E; margin: 32px 0;">
@@ -471,12 +538,9 @@ export const createNewsletterHtmlTemplate = (
         <tr>
           <td align="center" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; mso-table-lspace: 0pt; mso-table-rspace: 0pt; padding: 30px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #888888;">
             <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 10px 0;" class="footer-text">heripo lab | newsletter@heripo.com</p>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 10px 0;" class="footer-text">이 메일은 heripo.com에서 리서치 레이더를 구독하신 분들에게 발송됩니다.<br>
+            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.7; color: #444444; margin: 0 0 10px 0;" class="footer-text">${options?.isKrasNewsletter ? '이 메일은 heripo.com에서 뉴스레터를 구독하신 분들과 한국고고학회 회원에게 발송됩니다.' : '이 메일은 heripo.com에서 리서치 레이더를 구독하신 분들에게 발송됩니다.'}<br>
               더 이상 이메일을 받고 싶지 않으시면 <a href="{{{RESEND_UNSUBSCRIBE_URL}}}" target="_blank" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-weight: bold; transition: color 0.2s; color: #888888; text-decoration: underline;" class="footer-link">여기에서 수신 거부</a>하세요.</p>
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #999999; margin: 0;" class="footer-text">
-              Powered by <a href="https://github.com/heripo-lab/llm-newsletter-kit-core" target="_blank" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; transition: color 0.2s; color: #999999; text-decoration: underline;" class="footer-link">LLM Newsletter Kit</a> ·
-              <a href="https://github.com/heripo-lab/heripo-research-radar" target="_blank" style="-webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; transition: color 0.2s; color: #999999; text-decoration: underline;" class="footer-link">View Source</a>
-            </p>
+${poweredByFooterHtml()}
           </td>
         </tr>
       </table>

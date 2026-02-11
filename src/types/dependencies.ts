@@ -83,6 +83,79 @@ export interface TagRepository {
 }
 
 /**
+ * Base template options shared by all newsletter variants.
+ */
+interface BaseNewsletterTemplateOptions {
+  /**
+   * Markdown content for KRAS news section.
+   * Converted to HTML and injected into the newsletter template.
+   */
+  krasNewsMarkdown?: string;
+
+  /**
+   * Markdown content for heripo lab news section.
+   * Converted to HTML and injected into the newsletter template.
+   */
+  heripolabNewsMarkdown?: string;
+
+  /**
+   * Display date string for the newsletter header (e.g. "2026년 2월 12일").
+   * Injected from DateService.getDisplayDateString() at generation time.
+   */
+  displayDate?: string;
+}
+
+/**
+ * Template options for the default (heripo) newsletter variant.
+ */
+interface DefaultNewsletterTemplateOptions extends BaseNewsletterTemplateOptions {
+  isKrasNewsletter?: false;
+}
+
+/**
+ * Template options for the KRAS (Korean Archaeological Society) newsletter variant.
+ *
+ * When isKrasNewsletter is true, additional KRAS-specific options become available:
+ * - titleContext: Context string to prioritize in newsletter title generation
+ */
+interface KrasNewsletterTemplateOptions extends BaseNewsletterTemplateOptions {
+  isKrasNewsletter: true;
+
+  /**
+   * Context string to prioritize when generating the newsletter title.
+   * Only available in KRAS mode. When provided, the LLM will consider this value
+   * as the top priority along with the generated newsletter content for title creation.
+   * An empty string is treated as undefined (no context).
+   */
+  titleContext?: string;
+}
+
+/**
+ * Template customization options for newsletter HTML generation.
+ *
+ * Uses a discriminated union on `isKrasNewsletter`:
+ * - When `isKrasNewsletter` is `true`: KRAS-specific options (titleContext) are available.
+ * - When `isKrasNewsletter` is `false` or omitted: Only base options are available.
+ */
+export type NewsletterTemplateOptions =
+  | DefaultNewsletterTemplateOptions
+  | KrasNewsletterTemplateOptions;
+
+/**
+ * Options for generating the welcome email HTML.
+ *
+ * When `isKrasNewsletter` is `true`, KRAS-specific branding and content are applied.
+ * When `isKrasNewsletter` is `false` or omitted, standard heripo branding is used.
+ */
+export interface WelcomeTemplateOptions {
+  /** When true, apply KRAS (Korean Archaeological Society) branding */
+  isKrasNewsletter?: boolean;
+
+  /** Site base URL for constructing links (default: 'https://heripo.com') */
+  siteUrl?: string;
+}
+
+/**
  * Repository interface for newsletter management
  */
 export interface NewsletterRepository {

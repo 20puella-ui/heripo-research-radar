@@ -10,6 +10,7 @@ import type {
 import type {
   ArticleRepository,
   NewsletterRepository,
+  NewsletterTemplateOptions,
 } from '../types/dependencies';
 
 import { createNewsletterHtmlTemplate } from '~/templates/newsletter-html';
@@ -27,19 +28,35 @@ export class ContentGenerateProvider implements CoreContentGenerateProvider {
 
   model: ReturnType<GoogleGenerativeAIProvider>;
 
+  /** HTML template with markers for title and content injection */
+  htmlTemplate: HtmlTemplate;
+
+  /** Newsletter brand name (defaults to config, can be overridden via constructor) */
+  newsletterBrandName: string;
+
   constructor(
     private readonly google: GoogleGenerativeAIProvider,
     private readonly articleRepository: ArticleRepository,
     private readonly newsletterRepository: NewsletterRepository,
+    templateOptions?: NewsletterTemplateOptions,
+    brandName?: string,
   ) {
     this.model = this.google('gemini-3-pro-preview');
+    this.newsletterBrandName = brandName ?? newsletterConfig.brandName;
+    this.htmlTemplate = {
+      html: createNewsletterHtmlTemplate(
+        crawlingTargetGroups.flatMap((group) => group.targets),
+        templateOptions,
+      ),
+      markers: {
+        title: 'NEWSLETTER_TITLE',
+        content: 'NEWSLETTER_CONTENT',
+      },
+    };
   }
 
   /** LLM temperature setting for content generation */
   temperature = llmConfig.generation.temperature;
-
-  /** Newsletter brand name */
-  newsletterBrandName = newsletterConfig.brandName;
 
   /** Subscribe page URL */
   subscribePageUrl = newsletterConfig.subscribePageUrl as UrlString;
@@ -74,17 +91,6 @@ export class ContentGenerateProvider implements CoreContentGenerateProvider {
   async fetchArticleCandidates(): Promise<ArticleForGenerateContent[]> {
     return this.articleRepository.findCandidatesForNewsletter();
   }
-
-  /** HTML template with markers for title and content injection */
-  htmlTemplate: HtmlTemplate = {
-    html: createNewsletterHtmlTemplate(
-      crawlingTargetGroups.flatMap((group) => group.targets),
-    ),
-    markers: {
-      title: 'NEWSLETTER_TITLE',
-      content: 'NEWSLETTER_CONTENT',
-    },
-  };
 
   /**
    * Save generated newsletter to the repository

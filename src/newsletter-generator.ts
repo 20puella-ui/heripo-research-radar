@@ -13,9 +13,11 @@ import type {
   Newsletter,
 } from '@llm-newsletter-kit/core';
 
+import type { ContentOptions } from './config';
 import type {
   ArticleRepository,
   NewsletterRepository,
+  NewsletterTemplateOptions,
   TagRepository,
   TaskRepository,
 } from './types/dependencies';
@@ -24,7 +26,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { GenerateNewsletter } from '@llm-newsletter-kit/core';
 
-import { contentOptions, llmConfig } from './config';
+import { contentOptions, llmConfig, newsletterConfig } from './config';
 import { AnalysisProvider } from './providers/analysis.provider';
 import { ContentGenerateProvider } from './providers/content-generate.provider';
 import { CrawlingProvider } from './providers/crawling.provider';
@@ -80,6 +82,9 @@ export interface NewsletterGeneratorDependencies {
    * @example "2025-02-12"
    */
   publishDate?: string;
+
+  /** Newsletter template customization options (optional) */
+  templateOptions?: NewsletterTemplateOptions;
 }
 
 /**
@@ -131,14 +136,37 @@ function createNewsletterGenerator(
     dependencies.tagRepository,
   );
 
+  // Inject display date from DateService into template options
+  const templateOptions: NewsletterTemplateOptions | undefined =
+    dependencies.templateOptions
+      ? {
+          ...dependencies.templateOptions,
+          displayDate: dateService.getDisplayDateString(),
+        }
+      : undefined;
+  let resolvedContentOptions: ContentOptions = { ...contentOptions };
+  let resolvedBrandName = newsletterConfig.brandName;
+
+  if (templateOptions?.isKrasNewsletter) {
+    resolvedContentOptions = {
+      ...resolvedContentOptions,
+      expertField: ['고고학 우선적 문화유산'],
+      freeFormIntro: true,
+      titleContext: templateOptions.titleContext || undefined,
+    };
+    resolvedBrandName = '한국고고학회 뉴스레터';
+  }
+
   const contentGenerateProvider = new ContentGenerateProvider(
     google,
     dependencies.articleRepository,
     dependencies.newsletterRepository,
+    templateOptions,
+    resolvedBrandName,
   );
 
   return new GenerateNewsletter({
-    contentOptions,
+    contentOptions: resolvedContentOptions,
     dateService,
     taskService,
     crawlingProvider,
