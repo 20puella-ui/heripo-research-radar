@@ -2,7 +2,7 @@ name: Parser Health-Check
 
 on:
   schedule:
-    - cron: '0 6 * * *' # Daily at 15:00 KST (= 06:00 UTC)
+    - cron: '0 8 * * *' # Daily at 17:00 KST (= 08:00 UTC)
   workflow_dispatch:
 
 concurrency:
