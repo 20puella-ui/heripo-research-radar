@@ -36,4 +36,5 @@ CLAUDE.md
 .aider*
 .claude/
 *.ai.md
+.agents/
 
