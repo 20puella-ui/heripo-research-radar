@@ -280,3 +280,10 @@ Code-based automation delivers **superior output quality** through advanced AI t
 
 - [`@llm-newsletter-kit/core`](https://github.com/heripo-lab/llm-newsletter-kit-core) — Domain-agnostic newsletter engine
 - [Archaeological Informatization Using LLMs](https://poc.heripo.com) — Academic research (Korean)
+
+## Sponsor
+
+If you'd like to support heripo lab's open-source research, you can sponsor us through:
+
+- [Open Collective](https://opencollective.com/heripo-project) for general project sponsorship.
+- [fairy.hada.io/@heripo](https://fairy.hada.io/@heripo) for Korean individual supporters who prefer KRW payments.

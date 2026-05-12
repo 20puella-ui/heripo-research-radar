@@ -280,3 +280,10 @@ contentGeneration: {
 
 - [`@llm-newsletter-kit/core`](https://github.com/heripo-lab/llm-newsletter-kit-core) — 도메인 독립적인 뉴스레터 엔진
 - [대형 언어 모델(LLM)을 활용한 고고학 정보화 연구](https://poc.heripo.com) — 학술 연구
+
+## 후원
+
+heripo lab의 오픈소스 연구를 후원하려면 다음 경로를 이용할 수 있습니다:
+
+- [Open Collective](https://opencollective.com/heripo-project): 전반적인 프로젝트 후원
+- [fairy.hada.io/@heripo](https://fairy.hada.io/@heripo): 한국인 개인 후원자를 위한 원화 결제
