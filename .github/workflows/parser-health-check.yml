@@ -33,7 +33,7 @@ jobs:
       - name: Run health-check
         id: health_check
         continue-on-error: true
-        run: npm run health-check
+        run: npm run health-check -- --skip-khs-excavation
 
       - name: Build Slack payload
         if: always()

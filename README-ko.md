@@ -203,15 +203,18 @@ npm run dev:welcome-preview  # http://localhost:3335 에서 시작
 ```bash
 npm run health-check        # 헬스체크 실행
 npm run health-check:proxy  # 프록시 지원으로 실행 (.env 사용)
+npm run health-check -- --skip-khs-excavation  # 국가유산청 발굴조사 보고서/현장공개 제외
 ```
 
 **타겟별 검증 항목**:
 - `parseList()`: 유효한 title, date, detailUrl을 가진 비어있지 않은 배열 반환 여부
 - `parseDetail()`: 비어있지 않은 detailContent 반환 여부 (20자 이상)
 
+추가로 제외할 대상이 있으면 `--skip-target=<id-or-name>` 옵션을 사용할 수 있습니다.
+
 **출력**: 콘솔 테이블 요약 + CI 연동을 위한 compact 텍스트 서머리
 
-**CI**: GitHub Actions(`.github/workflows/parser-health-check.yml`)를 통한 일간 자동 실행, 결과를 Slack으로 알림
+**CI**: GitHub Actions(`.github/workflows/parser-health-check.yml`)를 통한 일간 자동 실행, 결과를 Slack으로 알림. CI에서는 Actions 환경에서 fetch만 불안정한 국가유산청 발굴조사 보고서/현장공개 대상을 제외합니다.
 
 ## 🤝 기여하기
 

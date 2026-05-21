@@ -30,7 +30,12 @@ export const parseKaahList = (html: string): ParsedTargetListItem[] => {
     const uniqId = fullUrl.pathname.split('/').pop() ?? undefined;
 
     const title = titleElement.text()?.trim() ?? '';
-    const date = getDate(columns.eq(columns.length - 2).text().trim());
+    const date = getDate(
+      columns
+        .eq(columns.length - 2)
+        .text()
+        .trim(),
+    );
 
     posts.push({
       uniqId,

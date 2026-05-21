@@ -204,15 +204,18 @@ CLI tool that validates all active crawling parsers against live websites. Detec
 ```bash
 npm run health-check        # Run health-check
 npm run health-check:proxy  # Run with proxy support (uses .env)
+npm run health-check -- --skip-khs-excavation  # Skip KHS excavation report/site-open targets
 ```
 
 **What it checks per target**:
 - `parseList()`: Returns non-empty array with valid title, date, and detailUrl
 - `parseDetail()`: Returns non-empty detailContent (20+ chars)
 
+Use `--skip-target=<id-or-name>` to exclude additional known-flaky targets from a run.
+
 **Output**: Console table summary + compact text summary for CI integrations.
 
-**CI**: Daily automated run via GitHub Actions (`.github/workflows/parser-health-check.yml`) with Slack notifications on pass/fail.
+**CI**: Daily automated run via GitHub Actions (`.github/workflows/parser-health-check.yml`) with Slack notifications on pass/fail. CI skips the KHS excavation report/site-open targets because their fetches can fail in Actions even when normal crawling works.
 
 ## 🤝 Contributing
 

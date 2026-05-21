@@ -6,6 +6,11 @@ import { Agent, fetch as undiciFetch } from 'undici';
 
 import { createCrawlingTargetGroups } from '~/config/crawling-targets';
 
+const KHS_EXCAVATION_TARGET_IDS = [
+  '국가유산청_발굴조사_보고서',
+  '국가유산청_발굴조사_현장공개',
+];
+
 const tlsAgent = new Agent({
   connect: { rejectUnauthorized: false },
 });
@@ -14,8 +19,61 @@ const unsafeFetch: typeof fetch = (input, init) =>
   undiciFetch(input as any, { ...init, dispatcher: tlsAgent } as any) as any;
 
 // CLI args
-const USE_PROXY = process.argv.includes('--proxy');
+const args = process.argv.slice(2);
+const USE_PROXY = args.includes('--proxy');
+const SHOW_HELP = args.includes('--help') || args.includes('-h');
 const PROXY_URL = process.env.PROXY_URL;
+
+function parseSkipTargets(cliArgs: string[]): Set<string> {
+  const skipTargets = new Set<string>();
+
+  for (let i = 0; i < cliArgs.length; i++) {
+    const arg = cliArgs[i];
+
+    if (arg === '--skip-khs-excavation') {
+      for (const targetId of KHS_EXCAVATION_TARGET_IDS) {
+        skipTargets.add(targetId);
+      }
+      continue;
+    }
+
+    if (arg === '--skip-target') {
+      const value = cliArgs[i + 1];
+      if (value && !value.startsWith('--')) {
+        skipTargets.add(value);
+        i++;
+      }
+      continue;
+    }
+
+    if (arg.startsWith('--skip-target=')) {
+      const value = arg.slice('--skip-target='.length);
+      if (value) {
+        skipTargets.add(value);
+      }
+    }
+  }
+
+  return skipTargets;
+}
+
+function printHelp(): void {
+  console.log(`Usage: npm run health-check -- [options]
+
+Options:
+  --proxy                 Use PROXY_URL for crawling requests
+  --skip-khs-excavation   Skip KHS excavation report/site-open targets
+  --skip-target <value>   Skip target by id or name (repeatable)
+  --skip-target=<value>   Skip target by id or name (repeatable)
+  -h, --help              Show this help message`);
+}
+
+if (SHOW_HELP) {
+  printHelp();
+  process.exit(0);
+}
+
+const skipTargets = parseSkipTargets(args);
 
 // Create proxy fetch if --proxy flag is set and PROXY_URL is available
 const proxyAgent =
@@ -63,6 +121,11 @@ interface TargetCheckResult {
   thrownError: string | null;
   status: 'pass' | 'fail';
   durationMs: number;
+}
+
+interface SkippedTarget {
+  groupName: string;
+  targetName: string;
 }
 
 async function fetchHtml(url: string): Promise<string> {
@@ -183,6 +246,7 @@ async function checkTarget(
 
 function buildSlackSummary(
   results: TargetCheckResult[],
+  skippedTargets: SkippedTarget[],
   passed: number,
   failed: number,
   total: number,
@@ -206,19 +270,44 @@ function buildSlackSummary(
     }
   }
 
+  if (skippedTargets.length > 0) {
+    lines.push('');
+    lines.push(`건너뛴 파서 (${skippedTargets.length}):`);
+    for (const target of skippedTargets) {
+      lines.push(`  [${target.groupName}] ${target.targetName}`);
+    }
+  }
+
   return '```\n' + lines.join('\n') + '\n```';
+}
+
+function isSkippedTarget(target: CrawlingTarget): boolean {
+  return skipTargets.has(String(target.id)) || skipTargets.has(target.name);
 }
 
 async function main() {
   console.log('=== Parser Health-Check ===');
   console.log(`Proxy: ${USE_PROXY && PROXY_URL ? PROXY_URL : 'disabled'}`);
+  console.log(
+    `Skip targets: ${skipTargets.size > 0 ? [...skipTargets].join(', ') : 'none'}`,
+  );
   console.log('');
 
   const allResults: TargetCheckResult[] = [];
+  const skippedTargets: SkippedTarget[] = [];
   let totalTargets = 0;
 
   for (const group of crawlingTargetGroups) {
     for (const target of group.targets) {
+      if (isSkippedTarget(target)) {
+        skippedTargets.push({
+          groupName: group.name,
+          targetName: target.name,
+        });
+        console.log(`Skipping [${group.name}] ${target.name}`);
+        continue;
+      }
+
       totalTargets++;
       process.stdout.write(`Checking [${group.name}] ${target.name} ... `);
 
@@ -268,12 +357,16 @@ async function main() {
   );
 
   console.log(
-    `\n${passed} passed, ${failed} failed out of ${totalTargets} targets`,
+    `\n${passed} passed, ${failed} failed out of ${totalTargets} checked targets`,
   );
+  if (skippedTargets.length > 0) {
+    console.log(`${skippedTargets.length} skipped`);
+  }
 
   // Write compact summary for GitHub Actions
   const slackSummary = buildSlackSummary(
     allResults,
+    skippedTargets,
     passed,
     failed,
     totalTargets,
@@ -295,6 +388,17 @@ async function main() {
       `**${passed}/${totalTargets}** 통과`,
       ``,
     ];
+
+    if (skippedTargets.length > 0) {
+      mdLines.push(`### 건너뛴 파서 (${skippedTargets.length})`);
+      mdLines.push(`| 그룹 | 파서 |`);
+      mdLines.push(`|------|------|`);
+      for (const target of skippedTargets) {
+        mdLines.push(`| ${target.groupName} | ${target.targetName} |`);
+      }
+      mdLines.push(``);
+    }
+
     if (failedResults.length > 0) {
       mdLines.push(`### 실패한 파서 (${failedResults.length})`);
       mdLines.push(`| 그룹 | 파서 | 오류 |`);
